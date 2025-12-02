@@ -61,6 +61,7 @@ def encode_integer(n):
 
 def process_entry(example, max_len=128):
     input_ids = [CLS_ID]
+    token_type_ids = [0]
     
     inp_val = example.inputs 
     out_val = example.output
@@ -72,21 +73,32 @@ def process_entry(example, max_len=128):
 
     for x in args:
         if isinstance(x, (list, tuple)):
-            input_ids.extend([encode_integer(i) for i in x])
+            tokens = [encode_integer(i) for i in x]
         else:
-            input_ids.append(encode_integer(x))
+            tokens = [encode_integer(x)]
+        
+        input_ids.extend(tokens)
+        token_type_ids.extend([0] * len(tokens))
+        
         input_ids.append(SEP_ID)
+        token_type_ids.append(0)
 
     if isinstance(out_val, (list, tuple)):
-        input_ids.extend([encode_integer(x) for x in out_val])
+        tokens = [encode_integer(x) for x in out_val]
     else:
-        input_ids.append(encode_integer(out_val))
+        tokens = [encode_integer(out_val)]
+    
+    input_ids.extend(tokens)
+    token_type_ids.extend([1] * len(tokens))
+    
     input_ids.append(SEP_ID)
+    token_type_ids.append(1)
 
     if len(input_ids) >= max_len:
         input_ids = input_ids[:max_len]
+        token_type_ids = token_type_ids[:max_len]
             
-    return input_ids
+    return input_ids, token_type_ids
 
 class DeepCoderIntegerDataset(Dataset):
     def __init__(self, flat_data, max_length = 128):
@@ -98,8 +110,7 @@ class DeepCoderIntegerDataset(Dataset):
     
     def __getitem__(self, idx):
         example, labels = self.data[idx]
-        
-        input_ids = process_entry(example, self.max_length)
+        input_ids, token_type_ids = process_entry(example, self.max_length)
         
         attention_mask = [1] * len(input_ids)
         
@@ -107,10 +118,12 @@ class DeepCoderIntegerDataset(Dataset):
         if padding_length > 0:
             input_ids = input_ids + [PAD_ID] * padding_length
             attention_mask = attention_mask + [0] * padding_length
-
+            token_type_ids = token_type_ids + [0] * padding_length
+            
         return {
             "input_ids": torch.tensor(input_ids, dtype=torch.long),
             "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
+            "token_type_ids": torch.tensor(token_type_ids, dtype=torch.long),
             "labels": torch.tensor(labels, dtype=torch.float),
         }
 
@@ -182,6 +195,7 @@ if __name__ == "__main__":
 
     print(f"Model Parameters: {model.num_parameters() / 1e6:.2f} Million")
 
+    # train
     args = TrainingArguments(
         output_dir=str(model_dir),
         per_device_train_batch_size=32,
@@ -192,9 +206,10 @@ if __name__ == "__main__":
         logging_strategy="epoch",
         save_strategy="epoch",
         eval_strategy="epoch",
-        load_best_model_at_end=True,
+        save_total_limit=None,
+        load_best_model_at_end=False,
         metric_for_best_model="f1_micro",
-        save_total_limit=2,
+        
         fp16=torch.cuda.is_available(),
         dataloader_num_workers=0,
         disable_tqdm=True,
@@ -210,6 +225,9 @@ if __name__ == "__main__":
     )
 
     print("Starting training...")
-    trainer.train()
+    try:
+        trainer.train()
+    except KeyboardInterrupt:
+        print("\nTraining interrupted by user. All checkpoints have been saved.")
     trainer.save_model(model_dir)
     print(f"Model saved to {model_dir}")
