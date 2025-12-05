@@ -1,1 +1,7 @@
 .venv/
+/enumerative-search/data/example/
+*.o
+**/models/
+__pycache__/
+.DS_Store
+*.png
