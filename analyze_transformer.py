@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,8 +6,8 @@ from pathlib import Path
 # file path
 BASELINE_CSV = Path("results/transformer/baseline_results3.csv")
 PREDICTION_CSV = Path("results/transformer/prediction_results3.csv")
-PRE_CSV = Path("results/neural_network/prediction_results3.csv")
-OUTPUT_IMG = "analysis_nn3.png"
+PRE_CSV = Path("results/transformer/prediction_results_pre3.csv")
+OUTPUT_IMG = "analysis_transformer3.png"
 
 def analyze():
     if not BASELINE_CSV.exists() or not PREDICTION_CSV.exists() or not PRE_CSV.exists():
