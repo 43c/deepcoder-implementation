@@ -330,6 +330,7 @@ if __name__ == '__main__':
     parser.add_argument("-n", "--num", type=int, default=1)
     parser.add_argument("-l", "--length", type=int, default=10, help="Max length of a list.")
     parser.add_argument("-V", "--value_range", type=int, default=256, help="Value range of an integer such that -V <= i < V")
+    parser.add_argument("--mode", choices=["EXAMPLES", "COMPILE"], default="EXAMPLES")
 
     args = parser.parse_args()
 
@@ -350,37 +351,67 @@ if __name__ == '__main__':
                     print(f", {p}",end="")
             print("]")
 
-    try:
-        with open(prog_path, "r") as f:
-            source = f.read()
+    match args.mode.lower():
+        case "examples":
+            try:
+                with open(prog_path, "r") as f:
+                    source = f.read()
 
-            print(f"generating {N} io samples with L={L}, V={V}")
-            print()
-            print(source)
-            print()
+                    print(f"generating {N} io samples with L={L}, V={V}")
+                    print()
+                    print(source)
+                    print()
 
-            LINQ, _ = get_language(V)
+                    LINQ, _ = get_language(V)
 
-            source = source.replace(' | ', '\n')
-            program = compile(source, LINQ, V, L)
+                    source = source.replace(' | ', '\n')
+                    program = compile(source, LINQ, V, L)
 
-            print(program.bounds)
+                    samples = generate_IO_examples(program, N, L, V)
+                    for i, (inputs, output) in enumerate(samples):
+                        print(f"SAMPLE {i}")
+                        print(f"  INPUTS")
+                        for input in inputs:
+                            print_int_or_list(input)
+                        
+                        print(f"  OUTPUT")
+                        print_int_or_list(output)
+                    
+                    print()
+            except FileNotFoundError:
+                print(f"Could not find file: {args.path}")
+            except Exception as e:
+                print(f"error! but i didn't expect this one!\n{e}")
+        
+        case "compile":
+            try:
+                with open(prog_path, "r") as f:
+                    source = f.read()
 
-            samples = generate_IO_examples(program, N, L, V)
-            for i, (inputs, output) in enumerate(samples):
-                print(f"SAMPLE {i}")
-                print(f"  INPUTS")
-                for input in inputs:
-                    print_int_or_list(input)
-                
-                print(f"  OUTPUT")
-                print_int_or_list(output)
-            
-            print()
-    except FileNotFoundError:
-        print(f"Could not find file: {args.path}")
-    except Exception as e:
-        print(f"error! but i didn't expect this one!\n{e}")
+                    print(f"compliling with L={L}, V={V}")
+                    print()
+                    print(source)
+                    print()
+
+                    LINQ, _ = get_language(V)
+
+                    source = source.replace(' | ', '\n')
+                    program = compile(source, LINQ, V, L)
+                    
+                    
+                    inputs = [list(map(lambda x: int(x), list("100110101010001100111010")))]
+                    output = program.fun(inputs)
+                    print(f"  INPUTS")
+                    for input in inputs:
+                        print_int_or_list(input)
+                    
+                    print(f"  OUTPUT")
+                    print_int_or_list(output)
+
+            except FileNotFoundError:
+                print(f"Could not find file: {args.path}")
+            except Exception as e:
+                print(f"error! but i didn't expect this one!\n{e}")
 
     
     

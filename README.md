@@ -49,7 +49,6 @@
 <h2 style="font-size: 6em; margin-left: 0.3em; margin-top: 50px; margin-bottom: 5px; color: #ead4ffff; text-shadow: 0 0 10px #DDA0DD, 0 0 30px #8A2BE2, 0 0 60px #4B0082; margin-right: -0.4em;">
 虚式「茈」
 </h2>
-<p style="letter-spacing: 8px; font-size: 12px; color: #E066FF; text-transform: uppercase; opacity: 0.8;">Hollow Technique: Purple</p>
 
 </div>
 
