@@ -1,6 +1,5 @@
 .venv/
 __pycache__/
-/enumerative-search/data/example/
 *.o
 **/models/
 __pycache__/
