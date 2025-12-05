@@ -86,10 +86,13 @@ pair<bool, pair<int, double> > run(string test_set,
   vector<int> fun_operand1, fun_operand2;
 #endif
 
+#if VERBOSE_MODE
+  cout << "Starting search..." << endl;
+#endif
+
   int depth = 0;
   while (depth >=  0) {
     const Successor *successor = iterators[depth]->Next();
-
     if (successor != NULL) {
       ApplySuccessor(io, successor);
       num_nodes_explored++;

@@ -9,6 +9,8 @@
 //
 ////
 
+const int NULL_V = 256;
+
 void map_int_int(Datum *arg1, IntIntLambda f, Datum *result_space) {
   result_space->SetType(Array);
   result_space->Resize(arg1->Size());
@@ -133,7 +135,7 @@ void decrement(Datum *arg1, Datum *result_space) {
 // Head, last, max, min
 void arr_max(Datum *arg1, Datum *result_space) {
   result_space->SetType(Int);
-  int max_val = INT_MIN;
+  int max_val = NULL_V;
   for (int i = 0; i < arg1->Size(); i++) {
     int cur_val = arg1->GetArrayElementValue(i);
     max_val = (cur_val > max_val) ? cur_val : max_val;
@@ -143,7 +145,7 @@ void arr_max(Datum *arg1, Datum *result_space) {
 
 void arr_min(Datum *arg1, Datum *result_space) {
   result_space->SetType(Int);
-  int min_val = INT_MAX;
+  int min_val = NULL_V;
   for (int i = 0; i < arg1->Size(); i++) {
     int cur_val = arg1->GetArrayElementValue(i);
     min_val = (cur_val < min_val) ? cur_val : min_val;
@@ -154,7 +156,7 @@ void arr_min(Datum *arg1, Datum *result_space) {
 void arr_head(Datum *arg1, Datum *result_space) {
   result_space->SetType(Int);
   if (arg1->Size() == 0) {
-    result_space->SetIntValue(0);
+    result_space->SetIntValue(NULL_V);
   } else {
     result_space->SetIntValue(arg1->GetArrayElementValue(0));
   }
@@ -163,7 +165,7 @@ void arr_head(Datum *arg1, Datum *result_space) {
 void arr_last(Datum *arg1, Datum *result_space) {
   result_space->SetType(Int);
   if (arg1->Size() == 0) {
-    result_space->SetIntValue(0);
+    result_space->SetIntValue(NULL_V);
   } else {
     int last_idx = arg1->Size() - 1;
     result_space->SetIntValue(arg1->GetArrayElementValue(last_idx));
@@ -315,7 +317,7 @@ void access(Datum *arg1, Datum *arg2, Datum *result_space) {
   if (offset >= 0 && offset < arg2->Size()) {
     result_space->SetIntValue(arg2->GetArrayElementValue(offset));
   } else {
-    result_space->SetIntValue(-1000000);  // TODO: what should happen here?
+    result_space->SetIntValue(NULL_V);  // TODO: what should happen here?
   }
 }
 

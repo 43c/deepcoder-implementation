@@ -346,6 +346,8 @@ void SuccessorIterator::InitSuccessors(string order_filename, int sort_and_add_c
   string name;
   while (f >> prob) {
     f >> name;
+    // cout << name << endl;
+    // cout << prob << endl;
     name_to_prob.insert(make_pair(name, prob));
   }
 
@@ -358,13 +360,20 @@ void SuccessorIterator::InitSuccessors(string order_filename, int sort_and_add_c
     //if (prob >= 0)
     weighted_successors.push_back(make_pair(prob, succ));
   }
-  successors_.clear();
 
+  successors_.clear();
+  // cout << "=======================================================" << endl;
+  // cout << "PRE-SORT" << endl;
+  // for (auto &p : weighted_successors) {
+  //   cout << p.first << " " << p.second.Name() << endl;
+  // }
+  // cout << "=======================================================" << endl;
+  
   sort(weighted_successors.begin(), weighted_successors.end(), SuccPairCompare);
 
   int ii = 0;
   for (auto &p : weighted_successors) {
-    //cout << p.first << " " << p.second.Name() << endl;
+    // cout << p.first << " " << p.second.Name() << endl;
     if ((sort_and_add_cutoff == -1) || (ii < sort_and_add_cutoff))
       successors_.push_back(p.second);
     ii++;
