@@ -20,7 +20,7 @@ COMPONENTS = [
     "TAKE", "MAXIMUM", "DROP",
 ]
 
-# Integer range constraints
+# Integer range
 INT_MIN = -256 
 INT_MAX = 255
 VOCAB_OFFSET = 2
@@ -31,13 +31,18 @@ UNK_ID = 1
 
 # vocabulary size
 VOCAB_SIZE = (INT_MAX - INT_MIN + 1) + VOCAB_OFFSET
+TYPE_INT_TOKEN = VOCAB_SIZE
+TYPE_ARRAY_TOKEN = VOCAB_SIZE + 1
+FULL_VOCAB_SIZE = VOCAB_SIZE + 2
 
-# hyperparameters specific to DeepCoder NN
+# hyperparameters
 EMBEDDING_DIM = 20      
 HIDDEN_SIZE = 256       
 NUM_LAYERS = 3          
+MAX_INPUTS = 3
+MAX_ARRAY_LEN = 20
+EXAMPLE_MAX_LEN = (MAX_INPUTS + 1) * (MAX_ARRAY_LEN + 1)
 MAX_EXAMPLES = 5
-EXAMPLE_MAX_LEN = 20
 
 # tokenizer
 def encode_integer(n):
@@ -45,25 +50,43 @@ def encode_integer(n):
         return UNK_ID
     return (n - INT_MIN) + VOCAB_OFFSET
 
-def process_io_examples(example, max_length):
+def get_type_token(x):
+    if isinstance(x, (list, tuple)):
+        return TYPE_ARRAY_TOKEN
+    else:
+        return TYPE_INT_TOKEN
+    
+def encode_value(x, max_array_len):
+    vals = []
+    if isinstance(x, (list, tuple)):
+        for v in x:
+            vals.append(encode_integer(v))
+            if len(vals) >= max_array_len:
+                break
+    else:
+        vals.append(encode_integer(x))
+    if len(vals) < max_array_len:
+        vals.extend([PAD_ID] * (max_array_len - len(vals)))
+    return vals
+
+def process_entry(example, max_length):
     input_ids = []
     inp_val = example.inputs
     out_val = example.output
 
     if isinstance(inp_val, (list, tuple)):
-        for x in inp_val:
-            if isinstance(x, (list, tuple)):
-                input_ids.extend([encode_integer(i) for i in x])
-            else:
-                input_ids.append(encode_integer(x))
+        inputs_list = list(inp_val)
     else:
-        input_ids.append(encode_integer(inp_val))
+        inputs_list = [inp_val]
+    inputs_list = inputs_list[:MAX_INPUTS]
 
-    if isinstance(out_val, (list, tuple)):
-        input_ids.extend([encode_integer(x) for x in out_val])
-    else:
-        input_ids.append(encode_integer(out_val))
-    
+    for x in inputs_list:
+        input_ids.append(get_type_token(x))
+        input_ids.extend(encode_value(x, MAX_ARRAY_LEN))
+
+    input_ids.append(get_type_token(out_val))
+    input_ids.extend(encode_value(out_val, MAX_ARRAY_LEN))
+
     if len(input_ids) > max_length:
         input_ids = input_ids[:max_length]
 
@@ -78,8 +101,8 @@ def calculate_score(logits, labels):
     preds_np = preds.detach().cpu().numpy()
     labels_np = labels.detach().cpu().numpy()
     f1 = f1_score(labels_np, preds_np, average='micro')
-    acc = accuracy_score(labels_np, preds_np)
-    return f1, acc
+    return f1
+
 
 class DeepCoderDataset(Dataset):
     def __init__(self, dataset, max_examples = 5, max_length = 20):
@@ -95,7 +118,7 @@ class DeepCoderDataset(Dataset):
         processed_examples = []
         cur_examples = dataset.examples[:self.max_examples]
         for example in cur_examples:
-            processed_example = process_io_examples(example, self.max_length)
+            processed_example = process_entry(example, self.max_length)
             processed_examples.append(processed_example)
         while len(processed_examples) < self.max_examples:
             processed_examples.append([PAD_ID] * self.max_length)
@@ -142,9 +165,8 @@ class DeepCoderDecoder(nn.Module):
         self.classifier = nn.Linear(hidden_size, num_classes)
 
     def forward(self, encoder_features):
-        pooled_features, _ = torch.max(encoder_features, dim=1)
+        pooled_features = encoder_features.mean(dim=1)
         logits = self.classifier(pooled_features)
-        
         return logits
     
 class DeepCoderModel(nn.Module):
@@ -161,11 +183,10 @@ class DeepCoderModel(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
-    #current_script_path = Path(__file__).resolve()
-    #project_root = current_script_path.parent.parent
-    #dataset_path = project_root / "bickle100k.pickle"
     dataset_path = "../dataset/train/bickle100k.pickle"
     model_dir = Path("models")
+    model_dir.mkdir(parents=True, exist_ok=True)
+
     print("Loading dataset...")
     with open(dataset_path, "rb") as f:
         d = pickle.load(f)
@@ -176,18 +197,17 @@ if __name__ == "__main__":
 
     print(f"Total dataset loaded")
 
-    # seperate train and test set
-    train_dataset, test_dataset = train_test_split(all_data, test_size=0.1, random_state=42)
+    train_entries, test_entries = train_test_split(all_data, test_size=0.1, random_state=42)
 
-    processed_train_data = DeepCoderDataset(train_dataset, max_examples=MAX_EXAMPLES, max_length=EXAMPLE_MAX_LEN)
-    processed_test_data = DeepCoderDataset(test_dataset, max_examples=MAX_EXAMPLES, max_length=EXAMPLE_MAX_LEN)
+    processed_train_data = DeepCoderDataset(train_entries, max_examples=MAX_EXAMPLES, max_length=EXAMPLE_MAX_LEN)
+    processed_test_data = DeepCoderDataset(test_entries, max_examples=MAX_EXAMPLES, max_length=EXAMPLE_MAX_LEN)
     
     batch_size = 64
     train_loader = DataLoader(processed_train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(processed_test_data, batch_size=batch_size, shuffle=False)
 
     model = DeepCoderModel(
-        num_embeddings=VOCAB_SIZE,
+        num_embeddings=FULL_VOCAB_SIZE,
         embedding_dim=EMBEDDING_DIM,
         hidden_size=HIDDEN_SIZE,
         input_length=EXAMPLE_MAX_LEN,
@@ -198,7 +218,7 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     # train
-    num_epochs = 50
+    num_epochs = 100
     for epoch in range(num_epochs):
         start_time = time.time()
         model.train()
@@ -236,13 +256,19 @@ if __name__ == "__main__":
         avg_test_loss = total_test_loss / len(test_loader)
         all_logits = torch.cat(all_logits)
         all_labels = torch.cat(all_labels)
-        val_f1, val_acc = calculate_score(all_logits, all_labels)
+        val_f1 = calculate_score(all_logits, all_labels)
         
         elapsed = time.time() - start_time
 
-        print(f"{epoch+1} | {avg_train_loss:.4f}     | {avg_test_loss:.4f}     | {val_f1:.4f}   | {val_acc:.4f}   | {elapsed:.0f}s")
+        print(
+            f"Epoch {epoch+1:03d} | "
+            f"train_loss={avg_train_loss:.4f} | "
+            f"val_loss={avg_test_loss:.4f} | "
+            f"val_f1={val_f1:.4f} | "
+            f"time={elapsed:.0f}s"
+        )
 
-        save_name = model_path / f"epoch_{epoch+1}.pth"
+        save_name = model_dir / f"epoch_{epoch+1}.pth"
         torch.save(model.state_dict(), save_name)
 
     print("models saved")

@@ -36,6 +36,7 @@ class CleanPrinterCallback(TrainerCallback):
                       f"F1: {f1:.4f} | "
                       f"Recall: {recall:.4f}")
 
+# components same as the successor in enumerative-search
 COMPONENTS = [
     "ZIPWITH", "*", "MAP", "SQR", "MUL4", "DIV4", "-",
     "MUL3", "DIV3", "MIN", "+", "SCANL1", "SHR", "SHL",
@@ -45,9 +46,12 @@ COMPONENTS = [
     "TAKE", "MAXIMUM", "DROP",
 ]
 
+# Integer range
 INT_MIN = -256
 INT_MAX = 255
 VOCAB_OFFSET = 4
+
+# special token IDs
 PAD_ID = 0
 SEP_ID = 1
 CLS_ID = 2
@@ -127,7 +131,7 @@ class DeepCoderIntegerDataset(Dataset):
             "labels": torch.tensor(labels, dtype=torch.float),
         }
 
-def compute_metrics(prediction):
+def calculate_score(prediction):
     logits, labels = prediction
     probs = 1 / (1 + np.exp(-logits))
     predictions = (probs > 0.5).astype(int)
@@ -220,7 +224,7 @@ if __name__ == "__main__":
         args=args,
         train_dataset=train_dataset,
         eval_dataset=test_dataset,
-        compute_metrics=compute_metrics,
+        compute_metrics=calculate_score,
         callbacks=[CleanPrinterCallback()],
     )
 
