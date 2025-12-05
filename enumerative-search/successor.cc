@@ -263,7 +263,7 @@ void SuccessorIterator::InitSuccessors(string order_filename, int sort_and_add_c
   string DIV3 = "DIV3";
   string MIN = "MIN";
   string PLUS = "+";
-  string SCANL = "SCANL";
+  string SCANL = "SCANL1";
   string SHR = "SHR";
   string SHL = "SHL";
   string MAX = "MAX";
@@ -355,7 +355,9 @@ void SuccessorIterator::InitSuccessors(string order_filename, int sort_and_add_c
   for (auto &succ : successors_) {
     double prob = 1.0;
     for (auto &component : components[succ.Name()]) {
+      // cout << "succ:" << succ.Name() << ", comp:" << component << ", pre: " << prob;
       prob = min(prob, name_to_prob[component]);
+      // cout << ", post: " << prob << endl;
     }
     //if (prob >= 0)
     weighted_successors.push_back(make_pair(prob, succ));
@@ -373,11 +375,12 @@ void SuccessorIterator::InitSuccessors(string order_filename, int sort_and_add_c
 
   int ii = 0;
   for (auto &p : weighted_successors) {
-    // cout << p.first << " " << p.second.Name() << endl;
+    cout << p.first << " " << p.second.Name() << endl;
     if ((sort_and_add_cutoff == -1) || (ii < sort_and_add_cutoff))
       successors_.push_back(p.second);
     ii++;
   }
+  cout << "====" << endl;
 }
 
 

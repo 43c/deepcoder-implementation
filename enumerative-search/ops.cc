@@ -135,20 +135,26 @@ void decrement(Datum *arg1, Datum *result_space) {
 // Head, last, max, min
 void arr_max(Datum *arg1, Datum *result_space) {
   result_space->SetType(Int);
-  int max_val = NULL_V;
+  int max_val = INT_MIN;
   for (int i = 0; i < arg1->Size(); i++) {
     int cur_val = arg1->GetArrayElementValue(i);
     max_val = (cur_val > max_val) ? cur_val : max_val;
+  }
+  if (max_val == INT_MIN) {
+    max_val = NULL_V;
   }
   result_space->SetIntValue(max_val);
 }
 
 void arr_min(Datum *arg1, Datum *result_space) {
   result_space->SetType(Int);
-  int min_val = NULL_V;
+  int min_val = INT_MAX;
   for (int i = 0; i < arg1->Size(); i++) {
     int cur_val = arg1->GetArrayElementValue(i);
     min_val = (cur_val < min_val) ? cur_val : min_val;
+  }
+  if (min_val == INT_MAX) {
+    min_val = NULL_V;
   }
   result_space->SetIntValue(min_val);
 }
@@ -380,4 +386,3 @@ void zipwith_max(Datum *arg1, Datum *arg2, Datum *result_space) {
 void zipwith_min(Datum *arg1, Datum *arg2, Datum *result_space) {
   zipwith(arg1, arg2, min_lambda, result_space);
 }
-

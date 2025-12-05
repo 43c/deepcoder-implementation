@@ -158,7 +158,7 @@ def main():
     )
     """
 
-    identifier = f"num_ex_{args.num_examples}_max_len_{args.max_len}"
+    identifier = f"test_num_ex_{args.num_examples}_max_len_{args.max_len}"
     csv_name = f"{args.test_set}.csv"
     csv_dir = results_dir / identifier / args.test_set
     try:
